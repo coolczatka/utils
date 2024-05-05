@@ -1,0 +1,31 @@
+#!/bin/bash
+
+if [ "$#" -ne 1 ]; then
+    echo "Użycie: $0 <ścieżka_do_pliku_wejściowego>"
+    exit 1
+fi
+
+inputFile="$1"
+
+if [ ! -f "$inputFile" ]; then
+    echo "Podany plik wejściowy nie istnieje"
+    exit 1
+fi
+
+outputDirectory=$(dirname "$inputFile")
+
+duration=$(ffprobe -i "$inputFile" -show_entries format=duration -v quiet -of csv='p=0')
+duration=$(echo "scale=0;$duration/1" | bc)
+
+chunkDuration=3600 # Sekundy
+startTime=0
+i=0
+fn=$(basename $inputFile)
+while [ $startTime -lt $duration ]; do
+    i=$(echo "$i+1" | bc)
+    outputFile="${outputDirectory}/${fn}_${i}.mp3"
+    ffmpeg -y -i "$inputFile" -ss "$startTime" -t "$chunkDuration" -c copy "$outputFile"
+    echo "Utworzono plik: $outputFile"
+    startTime=$((startTime + chunkDuration))
+done
+
